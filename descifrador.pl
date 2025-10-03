@@ -58,12 +58,18 @@ calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia):- calcularEntropiaA
 
 feedbackTotal(ElementoUniverso, Guesses, FeedbackTotal):- findall(Feedback, (member(Guess, Guesses), feedback(Guess, ElementoUniverso, Feedback)), FeedbackTotal).
 
+mapFeedback(ElementoUniverso, Guesses, FeedbackTotal):- findall(Feedback, (member(Guess, Guesses), feedback(Guess, ElementoUniverso, Feedback)), FeedbackTotal).
+
 
 entropiasAux([], _, _, [0, []]):-!.
-entropiasAux([ElementoUniverso|R], Guesses, CardinalidadGuesses,[EntropiaMaxima, ElementoMaximo]):- entropiasAux(R, Guesses, CardinalidadGuesses, [EntropiaActual, ElementoActual]), feedbackTotal(ElementoUniverso, Guesses, FeedbackTotal),
+entropiasAux([ElementoUniverso|R], Guesses, CardinalidadGuesses,[EntropiaMaxima, ElementoMaximo]):- entropiasAux(R, Guesses, CardinalidadGuesses, [EntropiaActual, ElementoActual]), 
+                                                                             feedbackTotal(ElementoUniverso, Guesses, FeedbackTotal),
                                                                              contarRepetidos(FeedbackTotal, Frecuencias),
                                                                              calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia),
-(Entropia >= EntropiaActual -> EntropiaMaxima is Entropia, ElementoMaximo = ElementoUniverso ; EntropiaMaxima is EntropiaActual, ElementoMaximo = ElementoActual).
+                                                                             (Entropia >= EntropiaActual -> EntropiaMaxima is Entropia, ElementoMaximo = ElementoUniverso ; EntropiaMaxima is EntropiaActual, ElementoMaximo = ElementoActual).
+
+
+filtrar(SolucionFeedbacks, GuessFeedback, Guess):- .
 
 
 
