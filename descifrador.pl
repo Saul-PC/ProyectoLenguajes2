@@ -11,10 +11,12 @@ logaritmo(X, Res):- Res is log(X)/log(2).
 generarEspacioMuestral(_, 0, []):-!.
 generarEspacioMuestral(Colores, Espacios, [ColorSeleccionado|Universo]):- member(ColorSeleccionado, Colores), EspaciosRestantes is Espacios - 1,
                                                         generarEspacioMuestral(Colores, EspaciosRestantes, Universo).  
-conjuntoUniverso(Colores, Espacios, Universo):-findall(Combinacion, generarEspacioMuestral(Colores, Espacios, Combinacion), Universo).
+
+%conjuntoUniverso(Colores, Espacios, Universo):-findall(Combinacion, generarEspacioMuestral(Colores, Espacios, Combinacion), Universo).
 
 
 cantidadAciertos([],[],0):-!.
+cantidadAciertos([],_,0):-!.
 cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Aciertos):- GuessH = ElemH, cantidadAciertos(GuessT, ElemT, AciertosNuevo),
                                                              Aciertos is AciertosNuevo + 1.
 cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Aciertos):- GuessH \= ElemH, cantidadAciertos(GuessT, ElemT, Aciertos).
@@ -54,6 +56,9 @@ calcularEntropiaAux([[_, Cantidad]|T], CardinalidadGuesses, Entropia):- calcular
                                                                        Argumento is ProbabilidadFeedback * Log,
                                                                        Entropia is EntropiaNueva + Argumento.
 
+
+
+
 calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia):- calcularEntropiaAux(Frecuencias, CardinalidadGuesses, EntropiaParcial), Entropia is EntropiaParcial * (-1).
 
 feedbackTotal(ElementoUniverso, Guesses, FeedbackTotal):- findall(Feedback, (member(Guess, Guesses), feedback(Guess, ElementoUniverso, Feedback)), FeedbackTotal).
@@ -69,7 +74,20 @@ entropiasAux([ElementoUniverso|R], Guesses, CardinalidadGuesses,[EntropiaMaxima,
                                                                              (Entropia >= EntropiaActual -> EntropiaMaxima is Entropia, ElementoMaximo = ElementoUniverso ; EntropiaMaxima is EntropiaActual, ElementoMaximo = ElementoActual).
 
 
-filtrar(SolucionFeedbacks, GuessFeedback, Guess):- .
+
+
+
+
+comparacionFeedback(GuessParcial, Guess, EspaciosRestantes,[AciertosGuess, IncognitasGuess]):- feedback(GuessParcial, Guess, [AciertosParteCod, IncognitasParteCod]),
+                                                                            AciertosParteCod =< AciertosGuess, IncognitasParteCod =< IncognitasGuess + EspaciosRestantes,!.
+
+%Invertir el Guess
+generarConjuntoSolucion(_Guess, _FeedbackGuess, _, 0, GuessParcial, Solucion):- Solucion = GuessParcial,!. 
+generarConjuntoSolucion(Guess, FeedbackGuess, Colores, Espacios, GuessParcial, Solucion):- member(ColorSeleccionado, Colores), 
+                                                                                           ParcialNuevo = [ColorSeleccionado| GuessParcial],
+                                                                                            EspaciosRestantes is Espacios - 1,
+                                                                                           comparacionFeedback(ParcialNuevo, Guess, EspaciosRestantes, FeedbackGuess),
+                                                                                           generarConjuntoSolucion(Guess, FeedbackGuess, Colores, EspaciosRestantes, ParcialNuevo, Solucion).
 
 
 
