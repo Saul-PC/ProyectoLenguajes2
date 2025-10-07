@@ -21,7 +21,9 @@ feedback(Guess, Codigo)-> A = contarAciertos(Guess, Codigo), [A, contarIncognita
 generarCodigo(_Colores, 0)-> [];
 generarCodigo(Colores, Espacios)-> [rand:uniform(Colores)|generarCodigo(Colores, Espacios -1)].
 
-loop(Codigo)-> io:format("Ingrese el intento: "), {ok, [Guess]} = io:fread("", "~w"), [A, B] = feedback(Guess, Codigo),
-         io:format("~p aciertos exactos, ~p aciertos de color~n", [A, B]), (A =:= length(Codigo) orelse loop(Codigo)).
+leerGuess()-> {ok, [Guess]} = io:fread("", "~w"), Guess.
 
+loop(Codigo)-> Guess = leerGuess(), [A, B] = feedback(Guess, Codigo), io:format("[~w, ~w]~n", [A, B]),
+               ((A =:= length(Codigo)) andalso ok) orelse loop(Codigo).
+            
 iniciarJuego(Colores, Espacios)-> Codigo = generarCodigo(Colores, Espacios), loop(Codigo). 
