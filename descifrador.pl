@@ -66,13 +66,30 @@ calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia):- calcularEntropiaA
 
 mapFeedback(ElementoUniverso, Guesses, FeedbackTotal):- findall(Feedback, (member(Guess, Guesses), feedback(Guess, ElementoUniverso, Feedback)), FeedbackTotal).
 
-agrupar([], 1, _,[]):-!.
-agrupar([],0,Elemento,[[Elemento,1]]):-!.
-agrupar([[Elemento, Cantidad]|T], _, Elemento, [[Elemento, CantidadNueva]|Agrupado]):- CantidadNueva is Cantidad + 1, agrupar(T, 1, Elemento, Agrupado),!.
-agrupar([[H, Cantidad]|T], Estado , Elemento, [[H, Cantidad]|Agrupado]):- agrupar(T, Estado, Elemento, Agrupado).
+%agrupar([], 1, _,[]):-!.
+%agrupar([],0,Elemento,[[Elemento,1]]):-!.
+%agrupar([[Elemento, Cantidad]|T], _, Elemento, [[Elemento, CantidadNueva]|Agrupado]):- CantidadNueva is Cantidad + 1, agrupar(T, 1, Elemento, Agrupado),!.
+%agrupar([[H, Cantidad]|T], Estado , Elemento, [[H, Cantidad]|Agrupado]):- agrupar(T, Estado, Elemento, Agrupado).
 
 
-%comparacionFeedback(GuessParcial, Guess, 0, [AciertosGuess, IncognitasGuess]):- !, feedback(GuessParcial, Guess, [AciertosTotales, IncognitasTotales]), AciertosTotales =:= AciertosGuess, IncognitasGuess =:= IncognitasTotales,!.
+contarRepetidos(_, [], [], Acum, Acum) :- !.
+contarRepetidos([A,B], [[A,B]|T], Resto, Acum, Total) :- NuevoAcum is Acum + 1,
+                                                          contarRepetidos([A,B], T, Resto, NuevoAcum, Total), !.
+contarRepetidos([A,B], [[X,Y]|T], [[X,Y]|T], Acum, Acum) :-
+    (A \= X ; B \= Y), !.
+
+agruparConsecutivos([], []) :- !.
+agruparConsecutivos([[A,B]|T], [[[A,B],Total]|Agrupado]) :- contarRepetidos([A,B], T, Resto, 1, Total),
+                                                             agruparConsecutivos(Resto, Agrupado).
+
+agruparPares(Lista, Agrupada) :-
+    msort(Lista, Ordenada),
+    agruparConsecutivos(Ordenada, Agrupada).
+
+
+
+
+comparacionFeedback(GuessParcial, Guess, 0, [AciertosGuess, IncognitasGuess]):- !, feedback(GuessParcial, Guess, [AciertosTotales, IncognitasTotales]), AciertosTotales =:= AciertosGuess, IncognitasGuess =:= IncognitasTotales,!.
 comparacionFeedback(GuessParcial, Guess, EspaciosRestantes,[AciertosGuess, IncognitasGuess]):- feedback(GuessParcial, Guess, [AciertosParteCod, IncognitasParteCod]),
                                                                             AciertosParteCod =< AciertosGuess, IncognitasParteCod =< IncognitasGuess + EspaciosRestantes.
 cumpleFiltros(_, [], _):-!.
@@ -82,8 +99,8 @@ cumpleFiltros(GuessParcial, Filtros, EspaciosRestantes) :-
 
 generarConjuntoSolucion(_, _, 0, GuessParcial, Solucion):- Solucion = GuessParcial,!. 
 generarConjuntoSolucion(Filtros, Colores, Espacios, GuessParcial, Solucion):- member(ColorSeleccionado, Colores), 
-                                                                            append(GuessParcial, [ColorSeleccionado], ParcialNuevo),
-                                                                            EspaciosRestantes is Espacios - 1,  %optimizable append
+                                                                            ParcialNuevo = [ColorSeleccionado|GuessParcial],
+                                                                            EspaciosRestantes is Espacios - 1,
                                                                             cumpleFiltros(ParcialNuevo, Filtros, EspaciosRestantes),
                                                                             generarConjuntoSolucion(Filtros, Colores, EspaciosRestantes, ParcialNuevo, Solucion).
                                                                         
@@ -99,7 +116,7 @@ generarCodigoAleatorio(Colores, Espacios, [X|Codigo]):- ColoresLimit is Colores 
 
 listaFeedbacks(_, [], Acc, Feedbacks):- Feedbacks = Acc,!.
 listaFeedbacks(ElementoUniverso, [PosibleSolucion| Restantes], Acc, Feedbacks):-feedback(PosibleSolucion, ElementoUniverso, Feedback), 
-                                                                                agrupar(Acc, 0, Feedback, Agrupado),
+                                                                                agrupar(Acc, 0, Feedback, Agrupado), % los parámetros son diferentes
                                                                                 listaFeedbacks(ElementoUniverso, Restantes, Agrupado, Feedbacks).
 entropias([], _, _, [EntropiaMaxima, ElementoMaximo], [EntropiaMaxima, ElementoMaximo]):-!.
 entropias([ElementoUniverso|R], ConjuntoSolucion, CardinalidadGuesses,[EntropiaMaxima, ElementoMaximo], Res):-  listaFeedbacks(ElementoUniverso, ConjuntoSolucion, [], Frecuencias),
@@ -124,9 +141,8 @@ muestraAleatoriaUniverso(N, Colores, Espacios, Muestra):- findall(Codigo, (gener
 
 conjuntoSolucion(Filtros, Colores, Espacios, Muestra):- findall(Solucion , (generarConjuntoSolucion(Filtros, Colores, Espacios, [], Solucion)), Muestra), length(Muestra, L),write(L).
 
-siguienteGuessGeneral(Colores, Espacios, Filtros, Guess):-muestraAleatoriaUniverso(1000, 100, Espacios, MuestraUniverso),
-                                                       muestraAleatoriaSolucion(1000,Filtros, Colores, Espacios, M2),!, length(M2, L),
-                                                       entropias(MuestraUniverso, M2, L, [0,[]], Candidato), Candidato = [_E, Guess], write(Guess).
+siguienteGuessGeneral(Colores, Espacios, Filtros, Guess):-conjuntoSolucion(Filtros, Colores, Espacios, MuestraUniverso), length(MuestraUniverso, L),
+                                                       entropias(MuestraUniverso, MuestraUniverso, L, [0,[]], Candidato), Candidato = [_E, Guess], write(Guess).
 
 siguienteGuessAcotado(Colores, Espacios, Filtros, Guess):- muestraAleatoriaUniverso(N, Colores, Espacios, MuestraUniverso),
                             (\+muestraAleatoriaSolucion(N, Filtros, Colores, Espacios, MuestraParcial) -> conjuntoSolucion(Filtros, Colores, Espacios, MuestraCompleta), length(MuestraCompleta, L),
@@ -136,6 +152,8 @@ siguienteGuessAcotado(Colores, Espacios, Filtros, Guess):- muestraAleatoriaUnive
                                                                                                  Candidato = [E, Guess], write(E)
                             ).
 
+
+% Loop Principal
 
 procesarFeedback(Guess, [Aciertos, _], Colores, Espacios, _, NumGuesses):- Aciertos =:= Espacios,
                                                                            format('¡Código adivinado en ~w intentos: ~w~n', [NumGuesses, Guess]),
@@ -154,5 +172,5 @@ jugarAux(Colores, Espacios, Filtros, NumGuesses):- (NumGuesses < 25 ->
                                                     flush_output,
                                                     read(Feedback),
                                                     procesarFeedback(Guess, Feedback, Colores, Espacios, Filtros, NumGuesses).
-jugar():- jugarAux(Colores, Espacios, [], 0).
+jugar:- jugarAux(Colores, Espacios, [], 0).
 
