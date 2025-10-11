@@ -115,8 +115,8 @@ generarCodigoAleatorio(Colores, Espacios, [X|Codigo]):- ColoresLimit is Colores 
                                                         generarCodigoAleatorio(Colores, EspaciosRestantes, Codigo).
 
 listaFeedbacks(_, [], Acc, Feedbacks):- Feedbacks = Acc,!.
-listaFeedbacks(ElementoUniverso, [PosibleSolucion| Restantes], Acc, Feedbacks):-feedback(PosibleSolucion, ElementoUniverso, Feedback), 
-                                                                                agrupar(Acc, 0, Feedback, Agrupado), % los parámetros son diferentes
+listaFeedbacks(ElementoUniverso, [PosibleSolucion| Restantes], _Acc, Feedbacks):-feedback(PosibleSolucion, ElementoUniverso, Feedback), 
+                                                                                agruparPares(Feedback, Agrupado),
                                                                                 listaFeedbacks(ElementoUniverso, Restantes, Agrupado, Feedbacks).
 entropias([], _, _, [EntropiaMaxima, ElementoMaximo], [EntropiaMaxima, ElementoMaximo]):-!.
 entropias([ElementoUniverso|R], ConjuntoSolucion, CardinalidadGuesses,[EntropiaMaxima, ElementoMaximo], Res):-  listaFeedbacks(ElementoUniverso, ConjuntoSolucion, [], Frecuencias),
@@ -153,24 +153,67 @@ siguienteGuessAcotado(Colores, Espacios, Filtros, Guess):- muestraAleatoriaUnive
                             ).
 
 
+
+
+generarGrupos([], _, []) :- !.
+generarGrupos(Lista, Tam, [Grupo|Resto]) :- length(Grupo, Tam), append(Grupo, Sobrantes, Lista), !,
+                                            generarGrupos(Sobrantes, Tam, Resto).
+generarGrupos(Lista, _, [Lista]).  
+
+tomarPrimeros(_, 0, []) :- !.
+tomarPrimeros([], _, []) :- !.
+tomarPrimeros([H|T], N, [H|T2]) :- N > 0,
+                                   N1 is N - 1,
+                                   tomarPrimeros(T, N1, T2).
+
+eliminarPrimeros(L, 0, L) :- !.
+eliminarPrimeros([], _, []) :- !.
+eliminarPrimeros([_|T], N, Resto) :-
+    N > 0,
+    N1 is N - 1,
+    eliminarPrimeros(T, N1, Resto).
+
+
+completarGuess(Grupo, Todos, Tam, Guess) :- length(Grupo, L),
+    ( L < Tam -> Faltan is Tam - L, tomarPrimeros(Todos, Faltan, Resto), append(Grupo, Resto, Guess)
+    ; L > Tam -> tomarPrimeros(Grupo, Tam, Guess)
+    ; Guess = Grupo ).
+
+generarGuessesIniciales([], _, _, []) :- !.
+generarGuessesIniciales(Colores, Todos, Tam, [Guess|Resto]) :- length(Colores, L),
+        L =< Tam ->
+        completarGuess(Colores, Todos, Tam, Guess),
+        Resto = []
+        ;
+        tomarPrimeros(Colores, Tam, Guess),
+        eliminarPrimeros(Colores, Tam, ColoresRestantes),
+        generarGuessesIniciales(ColoresRestantes, Todos, Tam, Resto).
+
+
+
+
 % Loop Principal
 
-procesarFeedback(Guess, [Aciertos, _], Colores, Espacios, _, NumGuesses):- Aciertos =:= Espacios,
-                                                                           format('¡Código adivinado en ~w intentos: ~w~n', [NumGuesses, Guess]),
-                                                                           flush_output.
-procesarFeedback(Guess, Feedback, Colores, Espacios, Filtros, NumGuesses):- NuevosFiltros = [[Guess, Feedback] | Filtros],
-                                                                            NuevoNumGuesses is NumGuesses + 1,
-                                                                            jugar(Colores, Espacios, NuevosFiltros, NuevoNumGuesses).
+jugar(Colores, Tam) :- generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
+                       write(GuessesIniciales), nl, % usar esto si format no sirve
+                       jugarAux(GuessesIniciales, [], Colores, Tam).
 
+jugarAux([], Filtros, Colores, Tam) :-  siguienteGuessGeneral(Colores, Filtros, Tam, GuessFinal),
+                                          format('Guess: ~w~n', [GuessFinal]),
+                                          pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
 
-jugarAux(Colores, Espacios, Filtros, NumGuesses):- (NumGuesses < 25 ->
-                                                                    siguienteGuessGeneral(Colores, Espacios, Filtros, Guess)
-                                                                    ; 
-                                                                    siguienteGuessAcotado(Colores, Espacios, Filtros, Guess)
-                                                   ),
-                                                    format('Guess #~w: ~w~n', [NumGuesses, Guess]),
-                                                    flush_output,
-                                                    read(Feedback),
-                                                    procesarFeedback(Guess, Feedback, Colores, Espacios, Filtros, NumGuesses).
-jugar:- jugarAux(Colores, Espacios, [], 0).
+jugarAux([G|Guesses], Filtros, Colores, Tam) :- format('Guess: ~w~n', [G]),
+                                                write('Ingrese feedback: '),nl,
+                                                read(Feedback),
+                                                NuevosFiltros = [[G, Feedback]|Filtros],
+                                                write(NuevosFiltros),nl,
+                                                jugarAux(Guesses, NuevosFiltros, Colores, Tam).
+
+pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :- write('Ingrese feedback: '),nl,
+                                                         read(Feedback),
+                                                         NuevosFiltros = [[Guess, Feedback]|Filtros],
+                                                         siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
+                                                         format('Guess: ~w~n', [Siguiente]),
+                                                         write(NuevosFiltros),nl,
+                                                         pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
 
