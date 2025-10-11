@@ -16,14 +16,22 @@ contarIncognitas([], _Codigo)-> 0;
 contarIncognitas([Elemento|Guess], Codigo)-> min(contarCoincidencias(Codigo, Elemento), contarCoincidencias([Elemento|Guess],Elemento))
                                           + contarIncognitas(eliminarCoincidencias(Guess, Elemento), Codigo).
 
-feedback(Guess, Codigo)-> A = contarAciertos(Guess, Codigo), [A, contarIncognitas(Guess, Codigo) - A].
-
+feedback(Guess, Codigo) -> A = contarAciertos(Guess, Codigo),
+                           B = contarIncognitas(Guess, Codigo) - A,
+                           lists:flatten(string:copies("!", A) ++ string:copies("?", B)).
 generarCodigo(_Colores, 0)-> [];
 generarCodigo(Colores, Espacios)-> [rand:uniform(Colores)|generarCodigo(Colores, Espacios -1)].
 
-leerGuess()-> {ok, [Guess]} = io:fread("", "~w"), Guess.
+leerGuess()-> Input = io:get_line("Ingrese su intento: "),
+    {ok, Tokens, _} = erl_scan:string(Input ++ "."),
+    {ok, Expr} = erl_parse:parse_term(Tokens),
+    Expr.
 
-loop(Codigo)-> Guess = leerGuess(), [A, B] = feedback(Guess, Codigo), io:format("[~w, ~w]~n", [A, B]),
-               ((A =:= length(Codigo)) andalso ok) orelse loop(Codigo).
+loop(Codigo)-> Guess = leerGuess(), FeedbackStr = feedback(Guess, Codigo),
+
+               io:format("~p~n~s~n", [Guess, FeedbackStr]),
+               ((length([C || C <- FeedbackStr, C =:= $!]) =:= length(Codigo)))
+               orelse loop(Codigo).
             
-iniciarJuego(Colores, Espacios)-> Codigo = generarCodigo(Colores, Espacios), loop(Codigo). 
+iniciarJuego(Colores, Espacios)-> Codigo = generarCodigo(Colores, Espacios), io:format("Cod ingresado: ~p~n", [Codigo]),
+loop(Codigo). 

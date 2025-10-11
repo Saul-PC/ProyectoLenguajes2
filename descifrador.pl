@@ -139,10 +139,10 @@ primerosHelper(N,Colores, Espacios, Filtros, Acc, Values) :-
 muestraAleatoriaSolucion(N, Filtros, Colores, Espacios, Muestra):- primerosN(N, Filtros, Colores, Espacios, Muestra).
 muestraAleatoriaUniverso(N, Colores, Espacios, Muestra):- findall(Codigo, (generarConjuntoAleatorio(N, Colores, Espacios, Codigo)), Muestra).
 
-conjuntoSolucion(Filtros, Colores, Espacios, Muestra):- findall(Solucion , (generarConjuntoSolucion(Filtros, Colores, Espacios, [], Solucion)), Muestra), length(Muestra, L),write(L).
+conjuntoSolucion(Filtros, Colores, Espacios, Muestra):- findall(Solucion , (generarConjuntoSolucion(Filtros, Colores, Espacios, [], Solucion)), Muestra). %length(Muestra, L),write(L).
 
 siguienteGuessGeneral(Colores, Espacios, Filtros, Guess):-conjuntoSolucion(Filtros, Colores, Espacios, MuestraUniverso), length(MuestraUniverso, L),
-                                                       entropias(MuestraUniverso, MuestraUniverso, L, [0,[]], Candidato), Candidato = [_E, Guess], write(Guess).
+                                                       entropias(MuestraUniverso, MuestraUniverso, L, [0,[]], Candidato), Candidato = [_E, Guess]. %write(Guess).
 
 siguienteGuessAcotado(Colores, Espacios, Filtros, Guess):- muestraAleatoriaUniverso(N, Colores, Espacios, MuestraUniverso),
                             (\+muestraAleatoriaSolucion(N, Filtros, Colores, Espacios, MuestraParcial) -> conjuntoSolucion(Filtros, Colores, Espacios, MuestraCompleta), length(MuestraCompleta, L),
@@ -191,29 +191,104 @@ generarGuessesIniciales(Colores, Todos, Tam, [Guess|Resto]) :- length(Colores, L
 
 
 
+leerFeedback(Chars, [Negras, Blancas]) :-
+    contar_signos(Chars, 0, 0, Negras, Blancas).
+
+contar_signos([], N, B, N, B).
+contar_signos(['!'|T], NAcc, BAcc, N, B) :-
+    NAcc1 is NAcc + 1,
+    contar_signos(T, NAcc1, BAcc, N, B).
+contar_signos(['?'|T], NAcc, BAcc, N, B) :-
+    BAcc1 is BAcc + 1,
+    contar_signos(T, NAcc, BAcc1, N, B).
+contar_signos([_|T], NAcc, BAcc, N, B) :-
+    contar_signos(T, NAcc, BAcc, N, B). 
+
+
 
 % Loop Principal
 
-jugar(Colores, Tam) :- generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
-                       write(GuessesIniciales), nl, % usar esto si format no sirve
-                       jugarAux(GuessesIniciales, [], Colores, Tam).
 
-jugarAux([], Filtros, Colores, Tam) :-  siguienteGuessGeneral(Colores, Filtros, Tam, GuessFinal),
-                                          format('Guess: ~w~n', [GuessFinal]),
-                                          pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
 
-jugarAux([G|Guesses], Filtros, Colores, Tam) :- format('Guess: ~w~n', [G]),
-                                                write('Ingrese feedback: '),nl,
-                                                read(Feedback),
-                                                NuevosFiltros = [[G, Feedback]|Filtros],
-                                                write(NuevosFiltros),nl,
-                                                jugarAux(Guesses, NuevosFiltros, Colores, Tam).
 
-pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :- write('Ingrese feedback: '),nl,
-                                                         read(Feedback),
-                                                         NuevosFiltros = [[Guess, Feedback]|Filtros],
-                                                         siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
-                                                         format('Guess: ~w~n', [Siguiente]),
-                                                         write(NuevosFiltros),nl,
-                                                         pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
+% Loop Principal
+
+
+jugar(Colores, Tam) :-
+    generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
+    write(GuessesIniciales), nl,
+    jugarAux(GuessesIniciales, [], Colores, Tam).
+
+
+jugarAux([], Filtros, Colores, Tam) :-
+    %format('Guess: ~w~n', [Filtros]),
+    siguienteGuessGeneral(Colores, Tam, Filtros, GuessFinal),
+    format('Guess: ~w~n', [GuessFinal]),
+    pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
+
+
+jugarAux([G|Guesses], Filtros, Colores, Tam) :-
+    format('Guess: ~w~n', [G]),
+    read_line_to_string(user_input, Linea),
+    string_chars(Linea, Chars),
+    leerFeedback(Chars, Feedback),
+    NuevosFiltros = [[G, Feedback] | Filtros],
+    write(NuevosFiltros), nl,
+    jugarAux(Guesses, NuevosFiltros, Colores, Tam).
+
+
+pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :-
+    read_line_to_string(user_input, Linea),
+    string_chars(Linea, Chars),
+    leerFeedback(Chars, Feedback),
+    NuevosFiltros = [[Guess, Feedback] | Filtros],
+    siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
+    format('Guess: ~w~n', [Siguiente]),
+    write(NuevosFiltros), nl,
+    pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+%
+%jugar(Colores, Tam) :- generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
+%                       write(GuessesIniciales), nl, % usar esto si format no sirve
+%                       jugarAux(GuessesIniciales, [], Colores, Tam).
+%
+%jugarAux([], Filtros, Colores, Tam) :-  siguienteGuessGeneral(Colores, Filtros, Tam, GuessFinal),
+%                                          format('Guess: ~w~n', [GuessFinal]),
+%                                          pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
+%
+%jugarAux([G|Guesses], Filtros, Colores, Tam) :- format('Guess: ~w~n', [G]),
+%                                                write('Ingrese feedback: '),nl,
+%                                                read(Feedback),
+%                                                NuevosFiltros = [[G, Feedback]|Filtros],
+%                                                write(NuevosFiltros),nl,
+%                                                jugarAux(Guesses, NuevosFiltros, Colores, Tam).
+%
+%pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :- write('Ingrese feedback: '),nl,
+%                                                         read(Feedback),
+%                                                         NuevosFiltros = [[Guess, Feedback]|Filtros],
+%                                                         siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
+%                                                         format('Guess: ~w~n', [Siguiente]),
+%                                                         write(NuevosFiltros),nl,
+%                                                         pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
 
