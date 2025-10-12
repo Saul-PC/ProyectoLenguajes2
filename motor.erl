@@ -18,7 +18,7 @@ contarIncognitas([Elemento|Guess], Codigo)-> min(contarCoincidencias(Codigo, Ele
 
 feedback(Guess, Codigo) -> A = contarAciertos(Guess, Codigo),
                            B = contarIncognitas(Guess, Codigo) - A,
-                           lists:flatten(string:copies("!", A) ++ string:copies("?", B)).
+                           lists:duplicate(A, $!) ++ lists:duplicate(B, $?).
 generarCodigo(_Colores, 0)-> [];
 generarCodigo(Colores, Espacios)-> [rand:uniform(Colores)|generarCodigo(Colores, Espacios -1)].
 
@@ -29,9 +29,10 @@ leerGuess()-> Input = io:get_line("Ingrese su intento: "),
 
 loop(Codigo)-> Guess = leerGuess(), FeedbackStr = feedback(Guess, Codigo),
 
-               io:format("~p~n~s~n", [Guess, FeedbackStr]),
+               io:format("~s~n", [FeedbackStr]),
                ((length([C || C <- FeedbackStr, C =:= $!]) =:= length(Codigo)))
                orelse loop(Codigo).
             
-iniciarJuego(Colores, Espacios)-> Codigo = generarCodigo(Colores, Espacios), io:format("Cod ingresado: ~p~n", [Codigo]),
-loop(Codigo). 
+iniciarJuego(Colores, Espacios)-> Codigo = generarCodigo(Colores, Espacios),
+                                        io:format("Cod ingresado: ~p~n", [Codigo]),
+                                        loop(Codigo). 

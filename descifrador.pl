@@ -1,4 +1,3 @@
-
 min(A, B, A):- A =< B,!.
 min(A, B, B):- A >= B,!.
 
@@ -11,42 +10,39 @@ random_int(N, R) :-
     random(X),              
     R is floor(X * (N+1)).  
                                                                                             
-                                            
+
 myRandom(N, R):- random(X), R is floor(X * (N + 1) + 1).
 
-generarEspacioMuestral(_, 0, []):-!.
-generarEspacioMuestral(Colores, Espacios, [ColorSeleccionado|Universo]):- member(ColorSeleccionado, Colores), EspaciosRestantes is Espacios - 1,
-                                                        generarEspacioMuestral(Colores, EspaciosRestantes, Universo).  
-
-conjuntoUniverso(Colores, Espacios, Universo):-findall(Combinacion, generarEspacioMuestral(Colores, Espacios, Combinacion), Universo).
-
-
-cantidadAciertos([],[],0):-!.
-cantidadAciertos([],_,0):-!.
-cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Aciertos):- GuessH = ElemH, cantidadAciertos(GuessT, ElemT, AciertosNuevo),
-                                                             Aciertos is AciertosNuevo + 1.
-cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Aciertos):- GuessH \= ElemH, cantidadAciertos(GuessT, ElemT, Aciertos).
+cantidadAciertos([],[],Acumulado, Acumulado):-!.
+cantidadAciertos([],_, Acumulado, Acumulado):-!.
+cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Acumulado, Aciertos):- GuessH = ElemH, AcumuladoNuevo is Acumulado + 1, cantidadAciertos(GuessT, ElemT, AcumuladoNuevo, Aciertos).
+cantidadAciertos([GuessH|GuessT], [ElemH|ElemT], Acumulado, Aciertos):- GuessH \= ElemH, cantidadAciertos(GuessT, ElemT, Acumulado, Aciertos).
 
 
-coincidencias([], _, 0):-!.
-coincidencias([H|T], H, Cantidad):- coincidencias(T, H, CantidadNueva), !, Cantidad is CantidadNueva + 1.
-coincidencias([_H|T], X, Cantidad):- coincidencias(T, X, Cantidad), !.
 
 
+coincidencias([],_, Acumulado, Acumulado):-!.
+coincidencias([H|T], H, Acumulado, Cantidad):- !,AcumuladoNuevo is Acumulado + 1, coincidencias(T, H, AcumuladoNuevo, Cantidad).
+coincidencias([_H|T], X, Acumulado, Cantidad):-!, coincidencias(T, X, Acumulado, Cantidad).
+
+
+
+eliminarRepeticiones(_E,[], Acumulado, Acumulado):-!.
+eliminarRepeticiones(E,[E|T], Acumulado, Res):- eliminarRepeticiones(E, T, Acumulado, Res),!.
+eliminarRepeticiones(E, [H|T], Acumulado, Res):- NuevoAcumulado = [H|Acumulado], eliminarRepeticiones(E, T, NuevoAcumulado, Res),!.
 
 
 minimoIncognitas([], _, 0):-!.
-minimoIncognitas([GuessHead|GuessTail], ElementoUniverso, Minimo):- eliminarRepeticiones(GuessHead, GuessTail, GuessRest),
+minimoIncognitas([GuessHead|GuessTail], ElementoUniverso, Minimo):- eliminarRepeticiones(GuessHead, GuessTail, [], Resto),
+                                                                    reverse(Resto, GuessRest),
                                                                     minimoIncognitas(GuessRest, ElementoUniverso, NuevoMinimo),
-                                                                    coincidencias([GuessHead|GuessTail], GuessHead, A),
-                                                                    coincidencias(ElementoUniverso, GuessHead, B), min(A,B, MinimoParcial), Minimo is NuevoMinimo + MinimoParcial. 
+                                                                    coincidencias([GuessHead|GuessTail], GuessHead, 0, A),
+                                                                    coincidencias(ElementoUniverso, GuessHead, 0, B), min(A,B, MinimoParcial), Minimo is NuevoMinimo + MinimoParcial. 
 
-eliminarRepeticiones(_E, [], []):-!.
-eliminarRepeticiones(E,[E|T],R):- eliminarRepeticiones(E, T, R),!.
-eliminarRepeticiones(E, [H|T],[H|R]):- eliminarRepeticiones(E, T, R),!.
+
 
 feedback(Guess, ElementoUniverso, [Aciertos, Incognitas]):- minimoIncognitas(Guess, ElementoUniverso, Minimo), 
-                                                 cantidadAciertos(Guess, ElementoUniverso, Aciertos), 
+                                                 cantidadAciertos(Guess, ElementoUniverso, 0, Aciertos), 
                                                  Incognitas is Minimo - Aciertos, !.
 
 
@@ -61,17 +57,6 @@ calcularEntropiaAux([[_, Cantidad]|T], CardinalidadGuesses, Entropia):- calcular
                                                                        logaritmo(ProbabilidadFeedback, Log),
                                                                        Argumento is ProbabilidadFeedback * Log,
                                                                        Entropia is EntropiaNueva + Argumento.
-
-calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia):- calcularEntropiaAux(Frecuencias, CardinalidadGuesses, EntropiaParcial), Entropia is EntropiaParcial * (-1).
-
-mapFeedback(ElementoUniverso, Guesses, FeedbackTotal):- findall(Feedback, (member(Guess, Guesses), feedback(Guess, ElementoUniverso, Feedback)), FeedbackTotal).
-
-%agrupar([], 1, _,[]):-!.
-%agrupar([],0,Elemento,[[Elemento,1]]):-!.
-%agrupar([[Elemento, Cantidad]|T], _, Elemento, [[Elemento, CantidadNueva]|Agrupado]):- CantidadNueva is Cantidad + 1, agrupar(T, 1, Elemento, Agrupado),!.
-%agrupar([[H, Cantidad]|T], Estado , Elemento, [[H, Cantidad]|Agrupado]):- agrupar(T, Estado, Elemento, Agrupado).
-
-
 contarRepetidos(_, [], [], Acum, Acum) :- !.
 contarRepetidos([A,B], [[A,B]|T], Resto, Acum, Total) :- NuevoAcum is Acum + 1,
                                                           contarRepetidos([A,B], T, Resto, NuevoAcum, Total), !.
@@ -85,6 +70,9 @@ agruparConsecutivos([[A,B]|T], [[[A,B],Total]|Agrupado]) :- contarRepetidos([A,B
 agruparPares(Lista, Agrupada) :-
     msort(Lista, Ordenada),
     agruparConsecutivos(Ordenada, Agrupada).
+                                                                       
+
+calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia):- calcularEntropiaAux(Frecuencias, CardinalidadGuesses, EntropiaParcial), Entropia is EntropiaParcial * (-1).
 
 
 
@@ -99,67 +87,31 @@ cumpleFiltros(GuessParcial, Filtros, EspaciosRestantes) :-
 
 generarConjuntoSolucion(_, _, 0, GuessParcial, Solucion):- Solucion = GuessParcial,!. 
 generarConjuntoSolucion(Filtros, Colores, Espacios, GuessParcial, Solucion):- member(ColorSeleccionado, Colores), 
-                                                                            ParcialNuevo = [ColorSeleccionado|GuessParcial],
-                                                                            EspaciosRestantes is Espacios - 1,
+                                                                            append(GuessParcial, [ColorSeleccionado], ParcialNuevo),
+                                                                            EspaciosRestantes is Espacios - 1,  %optimizable append
                                                                             cumpleFiltros(ParcialNuevo, Filtros, EspaciosRestantes),
                                                                             generarConjuntoSolucion(Filtros, Colores, EspaciosRestantes, ParcialNuevo, Solucion).
-                                                                        
-
-
-generarConjuntoAleatorio(0,_,_,_):-!.
-generarConjuntoAleatorio(N, Colores, Espacios, Codigo):- between(1,N,_), generarCodigoAleatorio(Colores, Espacios, Codigo). 
-                                        
-
-generarCodigoAleatorio(_, 0, []):-!.
-generarCodigoAleatorio(Colores, Espacios, [X|Codigo]):- ColoresLimit is Colores - 1, myRandom(ColoresLimit, X), EspaciosRestantes is Espacios - 1, 
-                                                        generarCodigoAleatorio(Colores, EspaciosRestantes, Codigo).
+                                                                                                           
 
 listaFeedbacks(_, [], Acc, Feedbacks):- Feedbacks = Acc,!.
-listaFeedbacks(ElementoUniverso, [PosibleSolucion| Restantes], _Acc, Feedbacks):-feedback(PosibleSolucion, ElementoUniverso, Feedback), 
-                                                                                agruparPares(Feedback, Agrupado),
-                                                                                listaFeedbacks(ElementoUniverso, Restantes, Agrupado, Feedbacks).
+listaFeedbacks(ElementoUniverso, [PosibleSolucion| Restantes], Acc, Feedbacks):-feedback(PosibleSolucion, ElementoUniverso, Feedback),
+                                                                                Acc2 = [Feedback| Acc],
+                                                                                listaFeedbacks(ElementoUniverso, Restantes, Acc2, Feedbacks).
+
+
 entropias([], _, _, [EntropiaMaxima, ElementoMaximo], [EntropiaMaxima, ElementoMaximo]):-!.
 entropias([ElementoUniverso|R], ConjuntoSolucion, CardinalidadGuesses,[EntropiaMaxima, ElementoMaximo], Res):-  listaFeedbacks(ElementoUniverso, ConjuntoSolucion, [], Frecuencias),
-                                                                             calcularEntropia(Frecuencias, CardinalidadGuesses, Entropia),
+                                                                            agruparPares(Frecuencias, Agrupado),
+                                                                             calcularEntropia(Agrupado, CardinalidadGuesses, Entropia),
                                                                              (Entropia >= EntropiaMaxima -> EntropiaNueva is Entropia, ElementoNuevo = ElementoUniverso; EntropiaNueva is EntropiaMaxima, ElementoNuevo = ElementoMaximo),
-                                                                            entropias(R, ConjuntoSolucion, CardinalidadGuesses, [EntropiaNueva, ElementoNuevo], Res).
-
-primerosN(N, Filtros, Colores, Espacios, Values) :-
-    primerosHelper(N, Colores, Espacios, Filtros,[], Values).
-
-primerosHelper(0,_,_,_, Acc, Acc) :- !.
-primerosHelper(N,Colores, Espacios, Filtros, Acc, Values) :-
-    N > 0,
-    generarConjuntoSolucion(Filtros, Colores, Espacios,[], Template), \+member(Template, Acc),
-    N1 is N - 1,
-    copy_term(Template, T),   
-    primerosHelper(N1, Colores, Espacios, Filtros, [T|Acc], Values).
+                                                                            entropias(R, ConjuntoSolucion, CardinalidadGuesses, [EntropiaNueva, ElementoNuevo], Res),!.
 
 
-muestraAleatoriaSolucion(N, Filtros, Colores, Espacios, Muestra):- primerosN(N, Filtros, Colores, Espacios, Muestra).
-muestraAleatoriaUniverso(N, Colores, Espacios, Muestra):- findall(Codigo, (generarConjuntoAleatorio(N, Colores, Espacios, Codigo)), Muestra).
+conjuntoSolucion(Filtros, Colores, Espacios, Muestra):- findall(Solucion , (generarConjuntoSolucion(Filtros, Colores, Espacios, [], Solucion)), Muestra),length(Muestra, L),write(L). 
 
-conjuntoSolucion(Filtros, Colores, Espacios, Muestra):- findall(Solucion , (generarConjuntoSolucion(Filtros, Colores, Espacios, [], Solucion)), Muestra). %length(Muestra, L),write(L).
-
-siguienteGuessGeneral(Colores, Espacios, Filtros, Guess):-conjuntoSolucion(Filtros, Colores, Espacios, MuestraUniverso), length(MuestraUniverso, L),
-                                                       entropias(MuestraUniverso, MuestraUniverso, L, [0,[]], Candidato), Candidato = [_E, Guess]. %write(Guess).
-
-siguienteGuessAcotado(Colores, Espacios, Filtros, Guess):- muestraAleatoriaUniverso(N, Colores, Espacios, MuestraUniverso),
-                            (\+muestraAleatoriaSolucion(N, Filtros, Colores, Espacios, MuestraParcial) -> conjuntoSolucion(Filtros, Colores, Espacios, MuestraCompleta), length(MuestraCompleta, L),
-                                                                                                 entropias(MuestraUniverso, MuestraCompleta, L, [0,[]], Candidato),
-                                                                                                 Candidato = [E, Guess], write(E)
-                                                                                               ; length(MuestraParcial, L), entropias(MuestraUniverso, MuestraParcial, L, [0,[]], Candidato),
-                                                                                                 Candidato = [E, Guess], write(E)
-                            ).
-
-
-
-
-generarGrupos([], _, []) :- !.
-generarGrupos(Lista, Tam, [Grupo|Resto]) :- length(Grupo, Tam), append(Grupo, Sobrantes, Lista), !,
-                                            generarGrupos(Sobrantes, Tam, Resto).
-generarGrupos(Lista, _, [Lista]).  
-
+siguienteGuessGeneral(Colores, Espacios, Filtros, Guess):-conjuntoSolucion(Filtros, Colores, Espacios, M2),!, length(M2, L),
+                                                       entropias(M2, M2, L, [0,[]], Candidato), Candidato = [_E, Guess],write(Guess),!.
+                                                                                                
 tomarPrimeros(_, 0, []) :- !.
 tomarPrimeros([], _, []) :- !.
 tomarPrimeros([H|T], N, [H|T2]) :- N > 0,
@@ -174,10 +126,19 @@ eliminarPrimeros([_|T], N, Resto) :-
     eliminarPrimeros(T, N1, Resto).
 
 
-completarGuess(Grupo, Todos, Tam, Guess) :- length(Grupo, L),
-    ( L < Tam -> Faltan is Tam - L, tomarPrimeros(Todos, Faltan, Resto), append(Grupo, Resto, Guess)
-    ; L > Tam -> tomarPrimeros(Grupo, Tam, Guess)
-    ; Guess = Grupo ).
+completarGuess(Grupo, Todos, Tam, Guess) :-
+    length(Grupo, L),
+    Faltan is Tam - L,
+    completarConRandom(Todos, Faltan, Aleatorios),
+    append(Grupo, Aleatorios, Guess).
+
+completarConRandom(_, 0, []) :- !.
+completarConRandom(Todos, N, [X|Resto]) :-
+    N > 0,
+    length(Todos, Len),
+    myRandom(Len,X),
+    N1 is N - 1,
+    completarConRandom(Todos, N1, Resto).
 
 generarGuessesIniciales([], _, _, []) :- !.
 generarGuessesIniciales(Colores, Todos, Tam, [Guess|Resto]) :- length(Colores, L),
@@ -204,6 +165,22 @@ contar_signos(['?'|T], NAcc, BAcc, N, B) :-
 contar_signos([_|T], NAcc, BAcc, N, B) :-
     contar_signos(T, NAcc, BAcc, N, B). 
 
+guessesNecesarios(C, S, R, Guesses) :-
+    N0 is C ** S,
+    LogRatio is log(10000 / N0),
+    LogR is log(R),
+    Raw is LogRatio / LogR,
+    Guesses is ceiling(Raw).
+    
+
+
+generarGuessAleatorio(_, 0, _, []):-!.
+generarGuessAleatorio(Colores, Espacios, _Historial, [Color|Guess]):- length(Colores, L), myRandom(L, Color),
+                                                          Restantes is Espacios - 1,
+                                                          generarGuessAleatorio(Colores, Restantes, _, Guess).
+
+generarGuessHeuristico(Colores, Espacios, _Historial, Guess):- generarGuessAleatorio(Colores, Espacios, _, Guess).
+
 
 
 % Loop Principal
@@ -214,81 +191,51 @@ contar_signos([_|T], NAcc, BAcc, N, B) :-
 % Loop Principal
 
 
-jugar(Colores, Tam) :-
-    generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
-    write(GuessesIniciales), nl,
-    jugarAux(GuessesIniciales, [], Colores, Tam).
+jugar(Colores, Espacios):- length(Colores, L), Combinaciones is L ** Espacios,
+                            (Combinaciones > 10000 
+                            -> (guessesNecesarios(L, Espacios, 0.36, Necesarios),
+                            (Combinaciones < 1000000 -> Necesarios2 is Necesarios+1 ; Necesarios2 is Necesarios),
+                               generarGuessesIniciales(Colores, Colores, Espacios, GuessesIniciales),
+                               jugarAux(GuessesIniciales, Necesarios2, [], Colores, Espacios))
+                            ; jugarAux([], 0, [], Colores, Espacios)).
 
 
-jugarAux([], Filtros, Colores, Tam) :-
+jugarAux(_, 0, Filtros, Colores, Tam) :-
     %format('Guess: ~w~n', [Filtros]),
     siguienteGuessGeneral(Colores, Tam, Filtros, GuessFinal),
     format('Guess: ~w~n', [GuessFinal]),
-    pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
+    pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam),!.
+
+jugarAux([], N, Filtros, Colores, Tam) :- N > 0,
+    generarGuessHeuristico(Colores, Tam, Filtros, Guess),!,
+    format('Guess: ~w~n', [Guess]),
+    read_line_to_string(user_input, Linea),!,
+    string_chars(Linea, Chars),!,
+    leerFeedback(Chars, Feedback),!,
+    NuevosFiltros = [[Guess, Feedback] | Filtros],
+    N2 is N-1,
+    jugarAux([], N2, NuevosFiltros, Colores, Tam).
 
 
-jugarAux([G|Guesses], Filtros, Colores, Tam) :-
+jugarAux([G|Guesses], N, Filtros, Colores, Tam) :-
     format('Guess: ~w~n', [G]),
-    read_line_to_string(user_input, Linea),
-    string_chars(Linea, Chars),
-    leerFeedback(Chars, Feedback),
+    read_line_to_string(user_input, Linea),!,
+    string_chars(Linea, Chars),!,
+    leerFeedback(Chars, Feedback),!,
     NuevosFiltros = [[G, Feedback] | Filtros],
-    write(NuevosFiltros), nl,
-    jugarAux(Guesses, NuevosFiltros, Colores, Tam).
+    N2 is N-1,
+    jugarAux(Guesses, N2, NuevosFiltros, Colores, Tam).
 
 
 pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :-
-    read_line_to_string(user_input, Linea),
-    string_chars(Linea, Chars),
-    leerFeedback(Chars, Feedback),
+    read_line_to_string(user_input, Linea),!,
+    string_chars(Linea, Chars),!,
+    leerFeedback(Chars, Feedback),!,
     NuevosFiltros = [[Guess, Feedback] | Filtros],
-    siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
+    siguienteGuessGeneral(Colores, Tam, NuevosFiltros, Siguiente),
     format('Guess: ~w~n', [Siguiente]),
-    write(NuevosFiltros), nl,
     pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-%
-%jugar(Colores, Tam) :- generarGuessesIniciales(Colores, Colores, Tam, GuessesIniciales),
-%                       write(GuessesIniciales), nl, % usar esto si format no sirve
-%                       jugarAux(GuessesIniciales, [], Colores, Tam).
-%
-%jugarAux([], Filtros, Colores, Tam) :-  siguienteGuessGeneral(Colores, Filtros, Tam, GuessFinal),
-%                                          format('Guess: ~w~n', [GuessFinal]),
-%                                          pedirFeedbackYContinuar(GuessFinal, Filtros, Colores, Tam).
-%
-%jugarAux([G|Guesses], Filtros, Colores, Tam) :- format('Guess: ~w~n', [G]),
-%                                                write('Ingrese feedback: '),nl,
-%                                                read(Feedback),
-%                                                NuevosFiltros = [[G, Feedback]|Filtros],
-%                                                write(NuevosFiltros),nl,
-%                                                jugarAux(Guesses, NuevosFiltros, Colores, Tam).
-%
-%pedirFeedbackYContinuar(Guess, Filtros, Colores, Tam) :- write('Ingrese feedback: '),nl,
-%                                                         read(Feedback),
-%                                                         NuevosFiltros = [[Guess, Feedback]|Filtros],
-%                                                         siguienteGuessGeneral(Colores, NuevosFiltros, Tam, Siguiente),
-%                                                         format('Guess: ~w~n', [Siguiente]),
-%                                                         write(NuevosFiltros),nl,
-%                                                         pedirFeedbackYContinuar(Siguiente, NuevosFiltros, Colores, Tam).
 
